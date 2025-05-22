@@ -1,0 +1,90 @@
+plugins {
+    id 'java'
+    id 'io.qameta.allure' version '2.12.0'
+}
+
+group 'by.shift'
+version '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Lombok:
+    compileOnly 'org.projectlombok:lombok:1.18.38'
+    annotationProcessor 'org.projectlombok:lombok:1.18.38'
+    testCompileOnly 'org.projectlombok:lombok:1.18.38'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.38'
+
+    // Jackson:
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.0'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.19.0'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.19.0'
+    testImplementation 'com.fasterxml.jackson.core:jackson-core:2.19.0'
+
+    // Cucumber:
+    testImplementation 'io.cucumber:cucumber-java:7.22.1'
+    testImplementation 'io.cucumber:cucumber-junit:7.22.1'
+
+    // jUnit 5:
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+
+    // Rest-Assured:
+    testImplementation 'io.rest-assured:rest-assured:5.5.1'
+    testImplementation 'io.rest-assured:json-path:5.5.1'
+    testImplementation 'io.rest-assured:json-schema-validator:5.5.1'
+
+    // Gson:
+    testImplementation 'com.google.code.gson:gson:2.13.1'
+
+    // Hamcrest:
+    testImplementation 'org.hamcrest:hamcrest:3.0'
+
+    // AssertJ
+    testImplementation 'org.assertj:assertj-core:3.27.3'
+
+    // Slf4j:
+    testImplementation 'org.slf4j:slf4j-nop:2.0.17'
+
+    //Allure
+    testImplementation 'io.qameta.allure:allure-cucumber7-jvm:2.24.0'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+tasks.withType(JavaCompile).configureEach {
+    group 'cucumber'
+    options.encoding = 'UTF-8'
+}
+
+tasks.register('copyEnvFile', Copy) {
+    group 'cucumber'
+    from "src/test/resources/environment.properties"
+    into "$buildDir/allure-results/"
+}
+
+tasks.register('runTests', JavaExec) {
+    systemProperty "console.encoding", "UTF-8"
+    systemProperty "file.encoding", "UTF-8"
+    group 'cucumber'
+    dependsOn 'clean'
+    mainClass = 'io.cucumber.core.cli.Main'
+    classpath = sourceSets.main.output + sourceSets.test.runtimeClasspath
+    systemProperty "allure.results.directory", "$buildDir/allure-results"
+    args = [
+            '--plugin', 'pretty',
+            '--plugin', "junit:$buildDir/cucumber-report/cucumber-report.xml",
+            '--plugin', "html:$buildDir/cucumber-report/index.html",
+            '--plugin', "json:$buildDir/cucumber-report/cucumber-report.json",
+            '--plugin', 'io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm',
+            '--glue', "by.shift",
+            "src/test/java/by/shift/features"
+    ]
+    dependsOn 'copyEnvFile'
+}
